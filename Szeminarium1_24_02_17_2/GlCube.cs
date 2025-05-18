@@ -290,7 +290,7 @@ namespace Szeminarium1_24_02_17_2
             // bind texture
             Gl.BindTexture(TextureTarget.Texture2D, texture);
 
-            var skyboxImageResult = ReadTextureImage("skybox.png");
+            var skyboxImageResult = ReadTextureImage("space.png");
             var textureBytes = (ReadOnlySpan<byte>)skyboxImageResult.Data.AsSpan();
             // Here we use "result.Width" and "result.Height" to tell OpenGL about how big our texture is.
             Gl.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Rgba, (uint)skyboxImageResult.Width,
