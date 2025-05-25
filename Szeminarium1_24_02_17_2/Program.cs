@@ -27,6 +27,8 @@ namespace Szeminarium1_24_02_17_2
 
         private static GlObject table;
 
+        private static GlObject spaceship;
+
         private static GlCube glCubeRotating;
 
         private static GlCube skyBox;
@@ -311,10 +313,10 @@ namespace Szeminarium1_24_02_17_2
         {
             // set material uniform to rubber
 
-            var modelMatrixForCenterCube = Matrix4X4.CreateScale((float)cubeArrangementModel.CenterCubeScale);
+            var modelMatrixForCenterCube = Matrix4X4.CreateScale(0.05f);
             SetModelMatrix(modelMatrixForCenterCube);
-            Gl.BindVertexArray(teapot.Vao);
-            Gl.DrawElements(GLEnum.Triangles, teapot.IndexArrayLength, GLEnum.UnsignedInt, null);
+            Gl.BindVertexArray(spaceship.Vao);
+            Gl.DrawElements(GLEnum.Triangles, spaceship.IndexArrayLength, GLEnum.UnsignedInt, null);
             Gl.BindVertexArray(0);
 
             //var modelMatrixForTable = Matrix4X4.CreateScale(1f, 1f, 1f);
@@ -363,7 +365,7 @@ namespace Szeminarium1_24_02_17_2
             float[] face5Color = [0.0f, 1.0f, 1.0f, 1.0f];
             float[] face6Color = [1.0f, 1.0f, 0.0f, 1.0f];
 
-            teapot = ObjResourceReader.CreateTeapotWithColor(Gl, face1Color);
+            spaceship = ObjResourceReader.CreateTeapotWithColor(Gl, face1Color);
 
             float[] tableColor = [System.Drawing.Color.Azure.R/256f,
                                   System.Drawing.Color.Azure.G/256f,
@@ -380,7 +382,7 @@ namespace Szeminarium1_24_02_17_2
 
         private static void Window_Closing()
         {
-            teapot.ReleaseGlObject();
+            spaceship.ReleaseGlObject();
             glCubeRotating.ReleaseGlObject();
         }
 

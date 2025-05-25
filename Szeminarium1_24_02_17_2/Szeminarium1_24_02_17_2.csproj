@@ -10,14 +10,14 @@
 
   <ItemGroup>
     <None Remove="Resources\space.png" />
-    <None Remove="Resources\teapot.obj" />
+    <None Remove="Resources\spaceship.obj" />
     <None Remove="Shaders\FragmentShader.frag" />
     <None Remove="Shaders\VertexShader.vert" />
   </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="Resources\space.png" />
-    <EmbeddedResource Include="Resources\teapot.obj" />
+    <EmbeddedResource Include="Resources\spaceship.obj" />
     <EmbeddedResource Include="Shaders\FragmentShader.frag" />
     <EmbeddedResource Include="Shaders\VertexShader.vert" />
   </ItemGroup>
