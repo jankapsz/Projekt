@@ -14,18 +14,28 @@ namespace Szeminarium1_24_02_17_2
         private static CubeArrangementModel cubeArrangementModel = new();
 
         private static IWindow window;
+
         private static IInputContext inputContext;
+
         private static GL Gl;
+
         private static ImGuiController controller;
+
         private static uint program;
 
         private static GlObject teapot;
+
         private static GlObject table;
+
         private static GlObject spaceship;
+
         private static GlCube glCubeRotating;
+
         private static GlCube skyBox;
 
         private static float Shininess = 50;
+
+        private static Vector3D<float> spaceshipPosition = Vector3D<float>.Zero;
 
         private const string ModelMatrixVariableName = "uModel";
         private const string NormalMatrixVariableName = "uNormal";
@@ -38,14 +48,6 @@ namespace Szeminarium1_24_02_17_2
         private const string LightPositionVariableName = "lightPos";
         private const string ViewPosVariableName = "viewPos";
         private const string ShininessVariableName = "shininess";
-
-        // Új mezők az űrhajó pozíciójához és irányához
-        private static Vector3D<float> spaceshipPosition = Vector3D<float>.Zero;
-        private static float spaceshipRotationY = 0f; // Y tengely körüli forgás
-
-        // Mozgási sebességek és lépések
-        private const float SpaceshipMoveStep = 0.1f;
-        private const float SpaceshipRotationStep = (float)(Math.PI / 180 * 5); // 5 fok
 
         static void Main(string[] args)
         {
@@ -95,7 +97,7 @@ namespace Szeminarium1_24_02_17_2
 
             LinkProgram();
 
-           //Gl.Enable(EnableCap.CullFace);
+            //Gl.Enable(EnableCap.CullFace);
 
             Gl.Enable(EnableCap.DepthTest);
             Gl.DepthFunc(DepthFunction.Lequal);
@@ -141,69 +143,39 @@ namespace Szeminarium1_24_02_17_2
         {
             switch (key)
             {
-                // Camera movement with arrows
                 case Key.Left:
                     cameraDescriptor.DecreaseZYAngle();
                     break;
                 case Key.Right:
                     cameraDescriptor.IncreaseZYAngle();
                     break;
-                case Key.Up:
-                    cameraDescriptor.DecreaseZXAngle();
-                    break;
                 case Key.Down:
-                    cameraDescriptor.IncreaseZXAngle();
-                    break;
-
-                // Camera zoom I and O
-                case Key.I:
-                    cameraDescriptor.DecreaseDistance();
-                    break;
-                case Key.O:
                     cameraDescriptor.IncreaseDistance();
                     break;
-
-                // Spaceship movement controls
+                case Key.Up:
+                    cameraDescriptor.DecreaseDistance();
+                    break;
+                case Key.U:
+                    cameraDescriptor.IncreaseZXAngle();
+                    break;
+                // Add movement controls
                 case Key.W:
-                    // Forward in the direction the spaceship is facing
-                    spaceshipPosition.X += SpaceshipMoveStep * (float)Math.Sin(spaceshipRotationY);
-                    spaceshipPosition.Z += SpaceshipMoveStep * (float)Math.Cos(spaceshipRotationY);
+                    MoveSpaceship(1f, 0, 0); // Forward
                     break;
                 case Key.S:
-                    // Backward
-                    spaceshipPosition.X -= SpaceshipMoveStep * (float)Math.Sin(spaceshipRotationY);
-                    spaceshipPosition.Z -= SpaceshipMoveStep * (float)Math.Cos(spaceshipRotationY);
+                    MoveSpaceship(1f, 0, 0); // Backward
                     break;
                 case Key.A:
-                    // Strafe left (perpendicular to facing direction)
-                    spaceshipPosition.X -= SpaceshipMoveStep * (float)Math.Cos(spaceshipRotationY);
-                    spaceshipPosition.Z += SpaceshipMoveStep * (float)Math.Sin(spaceshipRotationY);
+                    MoveSpaceship(0, 0, -1f); // Left
                     break;
                 case Key.D:
-                    // Strafe right (perpendicular to facing direction)
-                    spaceshipPosition.X += SpaceshipMoveStep * (float)Math.Cos(spaceshipRotationY);
-                    spaceshipPosition.Z -= SpaceshipMoveStep * (float)Math.Sin(spaceshipRotationY);
+                    MoveSpaceship(0, 0, 1f); // Right
                     break;
                 case Key.Q:
-                    // Move up (Y-axis)
-                    spaceshipPosition.Y += SpaceshipMoveStep;
+                    MoveSpaceship(0, 1f, 0); // Up
                     break;
                 case Key.E:
-                    // Move down (Y-axis)
-                    spaceshipPosition.Y -= SpaceshipMoveStep;
-                    break;
-                case Key.Z:
-                    // Rotate left (Y-axis)
-                    spaceshipRotationY -= SpaceshipRotationStep;
-                    break;
-                case Key.C:
-                    // Rotate right (Y-axis)
-                    spaceshipRotationY += SpaceshipRotationStep;
-                    break;
-
-                // Animation toggle Space
-                case Key.Space:
-                    cubeArrangementModel.AnimationEnabeld = !cubeArrangementModel.AnimationEnabeld;
+                    MoveSpaceship(0, -1f, 0); // Down
                     break;
             }
         }
@@ -240,7 +212,7 @@ namespace Szeminarium1_24_02_17_2
 
             DrawPulsingTeapot();
 
-            DrawRevolvingCube();
+            //DrawRevolvingCube();
 
             DrawSkyBox();
 
@@ -353,18 +325,35 @@ namespace Szeminarium1_24_02_17_2
 
         private static unsafe void DrawPulsingTeapot()
         {
-            // Create transformation matrix for the spaceship
-            Matrix4X4<float> scaleMatrix = Matrix4X4.CreateScale(0.05f);
-            Matrix4X4<float> rotationMatrix = Matrix4X4.CreateRotationY(spaceshipRotationY);
-            Matrix4X4<float> translationMatrix = Matrix4X4.CreateTranslation(spaceshipPosition);
-
-            // Combine transformations (order matters: scale -> rotate -> translate)
-            Matrix4X4<float> modelMatrix = scaleMatrix * rotationMatrix * translationMatrix;
-
-            SetModelMatrix(modelMatrix);
+            var modelMatrixForCenterCube = Matrix4X4.CreateScale(0.05f) *
+                                         Matrix4X4.CreateTranslation(spaceshipPosition);
+            SetModelMatrix(modelMatrixForCenterCube);
             Gl.BindVertexArray(spaceship.Vao);
             Gl.DrawElements(GLEnum.Triangles, spaceship.IndexArrayLength, GLEnum.UnsignedInt, null);
             Gl.BindVertexArray(0);
+        }
+
+        private static void MoveSpaceship(float forwardBack, float upDown, float leftRight)
+        {
+            // Get the camera's forward direction (looking at the spaceship)
+            var cameraForward = Vector3D.Normalize(cameraDescriptor.Target - cameraDescriptor.Position);
+
+            // Get the camera's right direction
+            var cameraRight = Vector3D.Normalize(Vector3D.Cross(cameraDescriptor.UpVector, cameraForward));
+
+            // Calculate movement vector
+            var movement = cameraForward * forwardBack +
+                          cameraDescriptor.UpVector * upDown +
+                          cameraRight * leftRight;
+
+            // Update spaceship position
+            spaceshipPosition += movement;
+
+            // Update camera target to follow the spaceship
+            cameraDescriptor.Target = spaceshipPosition;
+
+            // Optionally, you might want to update camera position to maintain relative distance
+            // cameraDescriptor.Position = spaceshipPosition - cameraForward * DistanceToOrigin;
         }
 
         private static unsafe void SetModelMatrix(Matrix4X4<float> modelMatrix)
@@ -406,7 +395,7 @@ namespace Szeminarium1_24_02_17_2
             float[] face5Color = [0.0f, 1.0f, 1.0f, 1.0f];
             float[] face6Color = [1.0f, 1.0f, 0.0f, 1.0f];
 
-            spaceship = ObjResourceReader.CreateTeapotWithTexture(Gl, "Resources/spaceship_texture.jpg");
+            spaceship = ObjResourceReader.CreateTeapotWithColor(Gl, face1Color);
 
             float[] tableColor = [System.Drawing.Color.Azure.R/256f,
                                   System.Drawing.Color.Azure.G/256f,
@@ -419,7 +408,7 @@ namespace Szeminarium1_24_02_17_2
             skyBox = GlCube.CreateInteriorCube(Gl, "");
         }
 
-        
+
 
         private static void Window_Closing()
         {

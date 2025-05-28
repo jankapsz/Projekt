@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <None Remove="Resources\space.png" />
+    <None Remove="Resources\spaceship_texture.jpg" />
     <None Remove="Resources\spaceship.obj" />
     <None Remove="Shaders\FragmentShader.frag" />
     <None Remove="Shaders\VertexShader.vert" />
@@ -17,6 +18,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Resources\space.png" />
+    <EmbeddedResource Include="Resources\spaceship_texture.jpg" />
     <EmbeddedResource Include="Resources\spaceship.obj" />
     <EmbeddedResource Include="Shaders\FragmentShader.frag" />
     <EmbeddedResource Include="Shaders\VertexShader.vert" />
@@ -26,6 +28,7 @@
     <PackageReference Include="Silk.NET" Version="2.20.0" />
     <PackageReference Include="Silk.NET.OpenGL.Extensions.ImGui" Version="2.20.0" />
     <PackageReference Include="StbImageSharp" Version="2.27.14" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.0.0" />
   </ItemGroup>
 
 </Project>

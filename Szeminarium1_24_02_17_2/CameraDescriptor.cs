@@ -21,7 +21,8 @@ namespace Szeminarium1_24_02_17_2
         {
             get
             {
-                return GetPointFromAngles(DistanceToOrigin, AngleToZYPlane, AngleToZXPlane);
+                var pos = GetPointFromAngles(DistanceToOrigin, AngleToZYPlane, AngleToZXPlane);
+                return new Vector3D<float>(pos.X + Target.X, pos.Y + Target.Y, pos.Z + Target.Z);
             }
         }
 
@@ -39,14 +40,10 @@ namespace Szeminarium1_24_02_17_2
         /// <summary>
         /// Gets the target point of the camera view.
         /// </summary>
-        public Vector3D<float> Target
-        {
-            get
-            {
-                // For the moment the camera is always pointed at the origin.
-                return Vector3D<float>.Zero;
-            }
-        }
+        /// <summary>
+        /// Gets or sets the target point of the camera view.
+        /// </summary>
+        public Vector3D<float> Target { get; set; } = Vector3D<float>.Zero;
 
         public void IncreaseZXAngle()
         {

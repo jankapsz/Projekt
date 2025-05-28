@@ -9,7 +9,7 @@ namespace Szeminarium1_24_02_17_2
         public uint Colors { get; }
         public uint Indices { get; }
         public uint IndexArrayLength { get; }
-        public object Texture { get; internal set; }
+        public uint Texture { get; internal set; }
 
         private GL Gl;
 
@@ -20,6 +20,7 @@ namespace Szeminarium1_24_02_17_2
             this.Colors = colors;
             this.Indices = indeces;
             this.IndexArrayLength = indexArrayLength;
+            this.Texture = Texture;
             this.Gl = gl;
         }
 
