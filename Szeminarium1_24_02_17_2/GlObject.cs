@@ -9,6 +9,7 @@ namespace Szeminarium1_24_02_17_2
         public uint Colors { get; }
         public uint Indices { get; }
         public uint IndexArrayLength { get; }
+        public object Texture { get; internal set; }
 
         private GL Gl;
 
