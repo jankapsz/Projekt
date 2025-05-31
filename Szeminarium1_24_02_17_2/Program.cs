@@ -28,6 +28,19 @@ namespace Szeminarium1_24_02_17_2
         private static GlObject table;
 
         private static GlObject spaceship;
+        private static GlObject sun;
+
+        private static GlObject mercury;
+        private static List<Vector3D<float>> mercuryPositions = new List<Vector3D<float>>();
+        private static List<float> mercuryScales = new List<float>();
+        private static int numberOfMercuries = 20;
+
+        private static GlObject asteroid;
+        private static List<Vector3D<float>> asteroidPositions = new List<Vector3D<float>>();
+        private static List<float> asteroidScales = new List<float>();
+        private static List<Vector3D<float>> asteroidRotations = new List<Vector3D<float>>(); // Random forgatások
+        private static int numberOfAsteroids = 20; // Több aszteroida
+        private static float asteroidGlobalScale = 1.0f;
 
         private static GlCube glCubeRotating;
 
@@ -35,7 +48,7 @@ namespace Szeminarium1_24_02_17_2
 
         private static float Shininess = 50;
 
-        private static Vector3D<float> spaceshipPosition = Vector3D<float>.Zero;
+        private static Vector3D<float> spaceshipPosition = new Vector3D<float>(-70f, 0f, -70f);
 
         private static bool FirstPersonView = false;
 
@@ -172,10 +185,10 @@ namespace Szeminarium1_24_02_17_2
                     MoveSpaceship(-1f, 0, 0); // Backward
                     break;
                 case Key.D:
-                    MoveSpaceship(0, 0, -1f); // Left
+                    RotateSpaceship(-0.1f); ; // Left
                     break;
                 case Key.A:
-                    MoveSpaceship(0, 0, 1f); // Right
+                    RotateSpaceship(0.1f);; // Right
                     break;
                 case Key.Q:
                     MoveSpaceship(0, 1f, 0); // Up
@@ -220,8 +233,12 @@ namespace Szeminarium1_24_02_17_2
                     (float)Math.Cos(spaceshipRotationY)
                 );
 
-                cameraDescriptor.OverridePosition = spaceshipPosition + new Vector3D<float>(0f, 0.7f, 22.0f); // x, y, z
-                cameraDescriptor.Target = spaceshipPosition + new Vector3D<float>(0f, 1.0f, 40.0f);
+                // Kamera pozíció: az űrhajó pozíciójában, kissé előrébb (az orr felé)
+                var cameraOffset = forwardDir * 20.0f; // 2 egységgel előrébb az orr irányába
+                cameraDescriptor.OverridePosition = spaceshipPosition + new Vector3D<float>(0f, 0.5f, 0f) + cameraOffset;
+
+                // Kamera target: messze az űrhajó irányába néz
+                cameraDescriptor.Target = spaceshipPosition + forwardDir * 100f + new Vector3D<float>(0f, 0.5f, 0f);
 
             }
             else
@@ -232,8 +249,8 @@ namespace Szeminarium1_24_02_17_2
                     -(float)Math.Cos(spaceshipRotationY)
                 );
 
+                cameraDescriptor.OverridePosition = spaceshipPosition + backwardDir * 30f + new Vector3D<float>(0f, 10f, 0f);
                 cameraDescriptor.Target = spaceshipPosition;
-                cameraDescriptor.OverridePosition = spaceshipPosition + backwardDir * 30 + new Vector3D<float>(0f, 4f, 0f);
             }
 
 
@@ -246,7 +263,8 @@ namespace Szeminarium1_24_02_17_2
             SetShininess();
 
             DrawPulsingTeapot();
-
+            DrawSun();
+            DrawMercuries();
 
             DrawSkyBox();
 
@@ -296,6 +314,29 @@ namespace Szeminarium1_24_02_17_2
             CheckError();
         }
 
+        private static unsafe void DrawSun()
+        {
+            // Nap a középpontban (0,0,0), megfelelő méretezéssel
+            var modelMatrixForSun = Matrix4X4.CreateScale(0.1f) * // Méret állítása
+                                   Matrix4X4.CreateTranslation(0f, 0f, 0f); // Középpont
+            SetModelMatrix(modelMatrixForSun);
+
+            Gl.BindVertexArray(sun.Vao);
+
+            // Textúra beállítása
+            int textureLocation = Gl.GetUniformLocation(program, TextureUniformVariableName);
+            if (textureLocation != -1)
+            {
+                Gl.Uniform1(textureLocation, 0);
+                Gl.ActiveTexture(TextureUnit.Texture0);
+                Gl.BindTexture(TextureTarget.Texture2D, sun.Texture);
+            }
+
+            Gl.DrawElements(GLEnum.Triangles, sun.IndexArrayLength, GLEnum.UnsignedInt, null);
+            Gl.BindVertexArray(0);
+            Gl.BindTexture(TextureTarget.Texture2D, 0);
+        }
+
         private static unsafe void SetLightColor()
         {
             int location = Gl.GetUniformLocation(program, LightColorVariableName);
@@ -305,7 +346,7 @@ namespace Szeminarium1_24_02_17_2
                 throw new Exception($"{LightColorVariableName} uniform not found on shader.");
             }
 
-            Gl.Uniform3(location, 1f, 1f, 1f);
+            Gl.Uniform3(location, 1.5f, 1.4f, 1f);
             CheckError();
         }
 
@@ -318,7 +359,7 @@ namespace Szeminarium1_24_02_17_2
                 throw new Exception($"{LightPositionVariableName} uniform not found on shader.");
             }
 
-            Gl.Uniform3(location, 0f, 10f, 0f);
+            Gl.Uniform3(location, 0f, 0f, 0f);
             CheckError();
         }
 
@@ -348,27 +389,10 @@ namespace Szeminarium1_24_02_17_2
             CheckError();
         }
 
-        private static unsafe void DrawRevolvingCube()
-        {
-            // set material uniform to metal
-
-            Matrix4X4<float> diamondScale = Matrix4X4.CreateScale(1f);
-            Matrix4X4<float> rotx = Matrix4X4.CreateRotationX((float)Math.PI / 4f);
-            Matrix4X4<float> rotz = Matrix4X4.CreateRotationZ((float)Math.PI / 4f);
-            Matrix4X4<float> rotLocY = Matrix4X4.CreateRotationY((float)cubeArrangementModel.DiamondCubeAngleOwnRevolution);
-            Matrix4X4<float> trans = Matrix4X4.CreateTranslation(4f, 4f, 0f);
-            Matrix4X4<float> rotGlobY = Matrix4X4.CreateRotationY((float)cubeArrangementModel.DiamondCubeAngleRevolutionOnGlobalY);
-            Matrix4X4<float> modelMatrix = diamondScale * rotx * rotz * rotLocY * trans * rotGlobY;
-
-            SetModelMatrix(modelMatrix);
-            Gl.BindVertexArray(glCubeRotating.Vao);
-            Gl.DrawElements(GLEnum.Triangles, glCubeRotating.IndexArrayLength, GLEnum.UnsignedInt, null);
-            Gl.BindVertexArray(0);
-        }
-
         private static unsafe void DrawPulsingTeapot()
         {
             var modelMatrixForCenterCube = Matrix4X4.CreateScale(0.05f) *
+                                         Matrix4X4.CreateRotationY(spaceshipRotationY) *
                                          Matrix4X4.CreateTranslation(spaceshipPosition);
             SetModelMatrix(modelMatrixForCenterCube);
 
@@ -384,6 +408,35 @@ namespace Szeminarium1_24_02_17_2
             }
 
             Gl.DrawElements(GLEnum.Triangles, spaceship.IndexArrayLength, GLEnum.UnsignedInt, null);
+            Gl.BindVertexArray(0);
+            Gl.BindTexture(TextureTarget.Texture2D, 0);
+        }
+
+        private static unsafe void DrawMercuries()
+        {
+            for (int i = 0; i < mercuryPositions.Count; i++)
+            {
+                var position = mercuryPositions[i];
+                var scale = mercuryScales[i];
+
+                var modelMatrix = Matrix4X4.CreateScale(scale) *
+                                 Matrix4X4.CreateTranslation(position);
+                SetModelMatrix(modelMatrix);
+
+                Gl.BindVertexArray(mercury.Vao);
+
+                // Textúra beállítása
+                int textureLocation = Gl.GetUniformLocation(program, TextureUniformVariableName);
+                if (textureLocation != -1)
+                {
+                    Gl.Uniform1(textureLocation, 0);
+                    Gl.ActiveTexture(TextureUnit.Texture0);
+                    Gl.BindTexture(TextureTarget.Texture2D, mercury.Texture);
+                }
+
+                Gl.DrawElements(GLEnum.Triangles, mercury.IndexArrayLength, GLEnum.UnsignedInt, null);
+            }
+
             Gl.BindVertexArray(0);
             Gl.BindTexture(TextureTarget.Texture2D, 0);
         }
@@ -409,6 +462,11 @@ namespace Szeminarium1_24_02_17_2
 
             // Optionally, you might want to update camera position to maintain relative distance
             // cameraDescriptor.Position = spaceshipPosition - cameraForward * DistanceToOrigin;
+        }
+
+        private static void RotateSpaceship(float rotationAmount)
+        {
+            spaceshipRotationY += rotationAmount;
         }
 
         private static unsafe void SetModelMatrix(Matrix4X4<float> modelMatrix)
@@ -451,6 +509,29 @@ namespace Szeminarium1_24_02_17_2
             float[] face6Color = [1.0f, 1.0f, 0.0f, 1.0f];
 
             spaceship = ObjResourceReader.CreateSpaceshipWithTexture(Gl);
+            sun = ObjResourceReader.CreateSunWithTexture(Gl);
+
+            mercury = ObjResourceReader.CreateMercuryWithTexture(Gl); // Új
+
+            // Random bolygó pozíciók generálása
+            Random random = new Random();
+            for (int i = 0; i < numberOfMercuries; i++)
+            {
+                // Random pozíció a nap körül (de nem túl közel)
+                float distance = random.Next(100, 2000); // 100-2000 egység távolság a naptól
+                float angleY = (float)(random.NextDouble() * 2 * Math.PI); // Random szög
+                float angleX = (float)(random.NextDouble() * Math.PI - Math.PI / 2); // -90° és +90° között
+
+                float x = distance * (float)Math.Cos(angleX) * (float)Math.Cos(angleY);
+                float y = distance * (float)Math.Sin(angleX);
+                float z = distance * (float)Math.Cos(angleX) * (float)Math.Sin(angleY);
+
+                mercuryPositions.Add(new Vector3D<float>(x, y, z));
+
+                // Random méret
+                float scale = (float)(random.NextDouble() * 0.02 + 0.01); // 0.01-0.06 közötti méret
+                mercuryScales.Add(scale);
+            }
 
             float[] tableColor = [System.Drawing.Color.Azure.R/256f,
                                   System.Drawing.Color.Azure.G/256f,
@@ -469,6 +550,8 @@ namespace Szeminarium1_24_02_17_2
         {
             spaceship.ReleaseGlObject();
             glCubeRotating.ReleaseGlObject();
+            sun.ReleaseGlObject();
+            mercury.ReleaseGlObject();
         }
 
         private static unsafe void SetProjectionMatrix()

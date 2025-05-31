@@ -11,7 +11,13 @@
   <ItemGroup>
     <None Remove="Resources\space.png" />
     <None Remove="Resources\spaceship_texture.jpg" />
+    <None Remove="Resources\sun_texture.png" />
+    <None Remove="Resources\mercury_texture.png" />
+    <None Remove="Resources\asteroid_texture.png" />
     <None Remove="Resources\spaceship.obj" />
+    <None Remove="Resources\sun.obj" />
+    <None Remove="Resources\mercury.obj" />
+    <None Remove="Resources\asteroid.obj" />
     <None Remove="Shaders\FragmentShader.frag" />
     <None Remove="Shaders\VertexShader.vert" />
   </ItemGroup>
@@ -20,6 +26,12 @@
     <EmbeddedResource Include="Resources\space.png" />
     <EmbeddedResource Include="Resources\spaceship_texture.jpg" />
     <EmbeddedResource Include="Resources\spaceship.obj" />
+    <EmbeddedResource Include="Resources\sun_texture.jpg" />
+    <EmbeddedResource Include="Resources\sun.obj" />
+    <EmbeddedResource Include="Resources\mercury_texture.jpg" />
+    <EmbeddedResource Include="Resources\mercury.obj" />
+    <EmbeddedResource Include="Resources\asteroid_texture.jpg" />
+    <EmbeddedResource Include="Resources\asteroid.obj" />
     <EmbeddedResource Include="Shaders\FragmentShader.frag" />
     <EmbeddedResource Include="Shaders\VertexShader.vert" />
   </ItemGroup>
