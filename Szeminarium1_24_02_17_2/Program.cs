@@ -39,8 +39,14 @@ namespace Szeminarium1_24_02_17_2
         private static List<Vector3D<float>> asteroidPositions = new List<Vector3D<float>>();
         private static List<float> asteroidScales = new List<float>();
         private static List<Vector3D<float>> asteroidRotations = new List<Vector3D<float>>(); // Random forgatások
-        private static int numberOfAsteroids = 20; // Több aszteroida
+        private static int numberOfAsteroids = 100; // Több aszteroida
         private static float asteroidGlobalScale = 1.0f;
+
+        private static List<Vector3D<float>> asteroidVelocities = new List<Vector3D<float>>(); // Sebesség vektorok
+        private static float asteroidSpeed = 2.0f; // Globális sebesség szorzó
+
+        private static Vector3D<float> asteroidGlobalDrift = new Vector3D<float>(0.2f, 0.1f, 0.3f); // Globális drift irány
+        private static float asteroidDriftStrength = 1.0f; // Mennyire erős a drift
 
         private static GlCube glCubeRotating;
 
@@ -48,7 +54,8 @@ namespace Szeminarium1_24_02_17_2
 
         private static float Shininess = 50;
 
-        private static Vector3D<float> spaceshipPosition = new Vector3D<float>(-70f, 0f, -70f);
+        private static Vector3D<float> spaceshipStartPosition = new Vector3D<float>(-70f, 0f, -70f);
+        private static Vector3D<float> spaceshipPosition = spaceshipStartPosition;
 
         private static bool FirstPersonView = false;
 
@@ -177,29 +184,29 @@ namespace Szeminarium1_24_02_17_2
                 case Key.U:
                     cameraDescriptor.IncreaseZXAngle();
                     break;
-                // Add movement controls
+
+                // Űrhajó mozgás - ÚJ LOGIKA
                 case Key.W:
-                    MoveSpaceship(1f, 0, 0); // Forward
+                    MoveSpaceshipForward(1f); // Előre
                     break;
                 case Key.S:
-                    MoveSpaceship(-1f, 0, 0); // Backward
-                    break;
-                case Key.D:
-                    RotateSpaceship(-0.1f); ; // Left
+                    MoveSpaceshipForward(-1f); // Hátra
                     break;
                 case Key.A:
-                    RotateSpaceship(0.1f);; // Right
+                    RotateSpaceship(0.1f); // Balra forgatás
+                    break;
+                case Key.D:
+                    RotateSpaceship(-0.1f); // Jobbra forgatás
                     break;
                 case Key.Q:
-                    MoveSpaceship(0, 1f, 0); // Up
+                    MoveSpaceshipVertical(1f); // Fel
                     break;
                 case Key.E:
-                    MoveSpaceship(0, -1f, 0); // Down
+                    MoveSpaceshipVertical(-1f); // Le
                     break;
                 case Key.V:
                     FirstPersonView = !FirstPersonView;
                     break;
-
             }
         }
 
@@ -210,6 +217,53 @@ namespace Szeminarium1_24_02_17_2
             // make sure it is threadsafe
             // NO GL calls
             cubeArrangementModel.AdvanceTime(deltaTime);
+
+            CheckCollisions();
+
+            // Aszteroidák mozgatása
+            for (int i = 0; i < asteroidPositions.Count; i++)
+            {
+                // Pozíció frissítése sebességvektor alapján
+                var currentPosition = asteroidPositions[i];
+                var velocity = asteroidVelocities[i];
+
+                // Új pozíció = régi pozíció + sebesség * idő * globális sebesség
+                var newPosition = currentPosition + velocity * (float)deltaTime * asteroidSpeed;
+                asteroidPositions[i] = newPosition;
+
+                // Opcionális: Aszteroida forgatása mozgás közben
+                var currentRotation = asteroidRotations[i];
+                asteroidRotations[i] = new Vector3D<float>(
+                    currentRotation.X + (float)deltaTime * 0.5f, // Lassú forgatás X tengely körül
+                    currentRotation.Y + (float)deltaTime * 0.3f, // Lassú forgatás Y tengely körül
+                    currentRotation.Z + (float)deltaTime * 0.7f  // Lassú forgatás Z tengely körül
+                );
+            }
+
+            // Határok ellenőrzése - ha túl messze megy, fordítsd meg az irányt
+            for (int i = 0; i < asteroidPositions.Count; i++)
+            {
+                var position = asteroidPositions[i];
+                float maxDistance = 3000f;
+                float distance = (float)Math.Sqrt(position.X * position.X + position.Y * position.Y + position.Z * position.Z);
+
+                if (distance > maxDistance)
+                {
+                    Random random = new Random();
+
+                    // ÚJ RANDOM POZÍCIÓ nagy területen
+                    float x = (float)(random.NextDouble() * 6000 - 3000);
+                    float y = (float)(random.NextDouble() * 6000 - 3000);
+                    float z = (float)(random.NextDouble() * 6000 - 3000);
+                    asteroidPositions[i] = new Vector3D<float>(x, y, z);
+
+                    // ÚJ RANDOM IRÁNY
+                    float velX = (float)(random.NextDouble() * 2 - 1);
+                    float velY = (float)(random.NextDouble() * 2 - 1);
+                    float velZ = (float)(random.NextDouble() * 2 - 1);
+                    asteroidVelocities[i] = Vector3D.Normalize(new Vector3D<float>(velX, velY, velZ));
+                }
+            }
 
             controller.Update((float)deltaTime);
         }
@@ -265,6 +319,7 @@ namespace Szeminarium1_24_02_17_2
             DrawPulsingTeapot();
             DrawSun();
             DrawMercuries();
+            DrawAsteroids();
 
             DrawSkyBox();
 
@@ -441,27 +496,60 @@ namespace Szeminarium1_24_02_17_2
             Gl.BindTexture(TextureTarget.Texture2D, 0);
         }
 
-        private static void MoveSpaceship(float forwardBack, float upDown, float leftRight)
+        private static unsafe void DrawAsteroids()
         {
-            // Get the camera's forward direction (looking at the spaceship)
-            var cameraForward = Vector3D.Normalize(cameraDescriptor.Target - cameraDescriptor.Position);
+            for (int i = 0; i < asteroidPositions.Count; i++)
+            {
+                var position = asteroidPositions[i];
+                var scale = asteroidScales[i] * asteroidGlobalScale;
+                var rotation = asteroidRotations[i];
 
-            // Get the camera's right direction
-            var cameraRight = Vector3D.Normalize(Vector3D.Cross(cameraDescriptor.UpVector, cameraForward));
+                // Komplex transzformáció: méretezés + forgatás + elhelyezés
+                var modelMatrix = Matrix4X4.CreateScale(scale) *
+                                 Matrix4X4.CreateRotationX(rotation.X) *
+                                 Matrix4X4.CreateRotationY(rotation.Y) *
+                                 Matrix4X4.CreateRotationZ(rotation.Z) *
+                                 Matrix4X4.CreateTranslation(position);
+                SetModelMatrix(modelMatrix);
 
-            // Calculate movement vector
-            var movement = cameraForward * forwardBack +
-                          cameraDescriptor.UpVector * upDown +
-                          cameraRight * leftRight;
+                Gl.BindVertexArray(asteroid.Vao);
 
-            // Update spaceship position
-            spaceshipPosition += movement * spaceshipMoveSpeed;
+                // Textúra beállítása
+                int textureLocation = Gl.GetUniformLocation(program, TextureUniformVariableName);
+                if (textureLocation != -1)
+                {
+                    Gl.Uniform1(textureLocation, 0);
+                    Gl.ActiveTexture(TextureUnit.Texture0);
+                    Gl.BindTexture(TextureTarget.Texture2D, asteroid.Texture);
+                }
 
-            // Update camera target to follow the spaceship
+                Gl.DrawElements(GLEnum.Triangles, asteroid.IndexArrayLength, GLEnum.UnsignedInt, null);
+            }
+
+            Gl.BindVertexArray(0);
+            Gl.BindTexture(TextureTarget.Texture2D, 0);
+        }
+
+        private static void MoveSpaceshipForward(float amount)
+        {
+            // Az űrhajó saját irányában mozog
+            var forwardDirection = new Vector3D<float>(
+                (float)Math.Sin(spaceshipRotationY),
+                0f,
+                (float)Math.Cos(spaceshipRotationY)
+            );
+
+            spaceshipPosition += forwardDirection * amount * spaceshipMoveSpeed;
+
+            // Kamera target frissítése
             cameraDescriptor.Target = spaceshipPosition;
+        }
 
-            // Optionally, you might want to update camera position to maintain relative distance
-            // cameraDescriptor.Position = spaceshipPosition - cameraForward * DistanceToOrigin;
+        // Fel/le mozgás
+        private static void MoveSpaceshipVertical(float amount)
+        {
+            spaceshipPosition += new Vector3D<float>(0f, amount * spaceshipMoveSpeed, 0f);
+            cameraDescriptor.Target = spaceshipPosition;
         }
 
         private static void RotateSpaceship(float rotationAmount)
@@ -513,6 +601,8 @@ namespace Szeminarium1_24_02_17_2
 
             mercury = ObjResourceReader.CreateMercuryWithTexture(Gl); // Új
 
+            asteroid = ObjResourceReader.CreateAsteroidWithTexture(Gl);
+
             // Random bolygó pozíciók generálása
             Random random = new Random();
             for (int i = 0; i < numberOfMercuries; i++)
@@ -533,6 +623,40 @@ namespace Szeminarium1_24_02_17_2
                 mercuryScales.Add(scale);
             }
 
+            // Aszteroidák generálása
+            for (int i = 0; i < numberOfAsteroids; i++)
+            {
+                // Aszteroidák közelebb a naphoz és szétszórtabban
+                float distance = random.Next(50, 1500); // Közelebb mint a bolygók
+                float angleY = (float)(random.NextDouble() * 2 * Math.PI);
+                float angleX = (float)(random.NextDouble() * Math.PI - Math.PI / 2);
+
+                float x = distance * (float)Math.Cos(angleX) * (float)Math.Cos(angleY);
+                float y = distance * (float)Math.Sin(angleX);
+                float z = distance * (float)Math.Cos(angleX) * (float)Math.Sin(angleY);
+
+                asteroidPositions.Add(new Vector3D<float>(x, y, z));
+
+                // Kisebb és változatosabb méretek
+                float scale = (float)(random.NextDouble() * 0.02 + 0.005); // 0.005-0.025 közötti méret
+                asteroidScales.Add(scale);
+
+                // Random forgatás minden tengely körül
+                float rotX = (float)(random.NextDouble() * 2 * Math.PI);
+                float rotY = (float)(random.NextDouble() * 2 * Math.PI);
+                float rotZ = (float)(random.NextDouble() * 2 * Math.PI);
+                asteroidRotations.Add(new Vector3D<float>(rotX, rotY, rotZ));
+
+                // ÚJ: Random mozgási irány
+                float velX = (float)(random.NextDouble() * 2 - 1); // -1 és 1 között
+                float velY = (float)(random.NextDouble() * 2 - 1);
+                float velZ = (float)(random.NextDouble() * 2 - 1);
+
+                // Normalizáljuk a sebességvektort, hogy ugyanolyan gyorsak legyenek
+                var velocity = Vector3D.Normalize(new Vector3D<float>(velX, velY, velZ));
+                asteroidVelocities.Add(velocity);
+            }
+
             float[] tableColor = [System.Drawing.Color.Azure.R/256f,
                                   System.Drawing.Color.Azure.G/256f,
                                   System.Drawing.Color.Azure.B/256f,
@@ -544,6 +668,68 @@ namespace Szeminarium1_24_02_17_2
             skyBox = GlCube.CreateInteriorCube(Gl, "");
         }
 
+        private static void CheckCollisions()
+        {
+            float spaceshipRadius = 1.0f; // Űrhajó ütközési sugara
+
+            // Ütközés a nappal
+            float sunRadius = 58.0f; // Nap ütközési sugara
+            float distanceToSun = (float)Math.Sqrt(spaceshipPosition.X * spaceshipPosition.X +
+                                                  spaceshipPosition.Y * spaceshipPosition.Y +
+                                                  spaceshipPosition.Z * spaceshipPosition.Z);
+
+            if (distanceToSun < (spaceshipRadius + sunRadius))
+            {
+                ResetGame();
+                return;
+            }
+
+            // Ütközés a Merkúr bolygókkal
+            for (int i = 0; i < mercuryPositions.Count; i++)
+            {
+                var mercuryPos = mercuryPositions[i];
+                float mercuryRadius = mercuryScales[i] * 2600.0f; // Méretezés alapján sugár
+
+                float distance = Vector3D.Distance(spaceshipPosition, mercuryPos);
+
+                if (distance < (spaceshipRadius + mercuryRadius))
+                {
+                    ResetGame();
+                    return;
+                }
+            }
+
+            // Ütközés az aszteroidákkal
+            for (int i = 0; i < asteroidPositions.Count; i++)
+            {
+                var asteroidPos = asteroidPositions[i];
+                float asteroidRadius = asteroidScales[i] * 500.0f; // Méretezés alapján sugár
+
+                float distance = Vector3D.Distance(spaceshipPosition, asteroidPos);
+
+                if (distance < (spaceshipRadius + asteroidRadius))
+                {
+                    ResetGame();
+                    return;
+                }
+            }
+        }
+
+        private static void ResetGame()
+        {
+            // Űrhajó visszaállítása kezdő pozícióba
+            spaceshipPosition = spaceshipStartPosition;
+            spaceshipRotationY = 0f;
+
+            // Kamera visszaállítása
+            cameraDescriptor.OverridePosition = null;
+            cameraDescriptor.Target = spaceshipPosition;
+
+            // FirstPersonView kikapcsolása
+            FirstPersonView = false;
+
+            Console.WriteLine("ÜTKÖZÉS! Játék újraindítva.");
+        }
 
 
         private static void Window_Closing()
@@ -552,6 +738,7 @@ namespace Szeminarium1_24_02_17_2
             glCubeRotating.ReleaseGlObject();
             sun.ReleaseGlObject();
             mercury.ReleaseGlObject();
+            asteroid.ReleaseGlObject();
         }
 
         private static unsafe void SetProjectionMatrix()
