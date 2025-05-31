@@ -256,11 +256,11 @@ namespace Szeminarium1_24_02_17_2
             // Kameraváltás checkbox
             ImGuiNET.ImGui.Checkbox("First Person View", ref FirstPersonView);
 
-            //ImGuiNET.ImGui.Separator(); // Elválasztó vonal
+            ImGuiNET.ImGui.Separator(); // Elválasztó vonal
 
             // Lighting beállítások
-            //ImGuiNET.ImGui.Text("Lighting Properties:");
-            //ImGuiNET.ImGui.SliderFloat("Shininess", ref Shininess, 1, 200);
+            ImGuiNET.ImGui.Text("Lighting Properties:");
+            ImGuiNET.ImGui.SliderFloat("Shininess", ref Shininess, 1, 200);
 
             ImGuiNET.ImGui.End();
 
@@ -371,9 +371,21 @@ namespace Szeminarium1_24_02_17_2
             var modelMatrixForCenterCube = Matrix4X4.CreateScale(0.05f) *
                                          Matrix4X4.CreateTranslation(spaceshipPosition);
             SetModelMatrix(modelMatrixForCenterCube);
+
             Gl.BindVertexArray(spaceship.Vao);
+
+            // Textúra beállítása
+            int textureLocation = Gl.GetUniformLocation(program, TextureUniformVariableName);
+            if (textureLocation != -1)
+            {
+                Gl.Uniform1(textureLocation, 0);
+                Gl.ActiveTexture(TextureUnit.Texture0);
+                Gl.BindTexture(TextureTarget.Texture2D, spaceship.Texture);
+            }
+
             Gl.DrawElements(GLEnum.Triangles, spaceship.IndexArrayLength, GLEnum.UnsignedInt, null);
             Gl.BindVertexArray(0);
+            Gl.BindTexture(TextureTarget.Texture2D, 0);
         }
 
         private static void MoveSpaceship(float forwardBack, float upDown, float leftRight)
@@ -438,7 +450,7 @@ namespace Szeminarium1_24_02_17_2
             float[] face5Color = [0.0f, 1.0f, 1.0f, 1.0f];
             float[] face6Color = [1.0f, 1.0f, 0.0f, 1.0f];
 
-            spaceship = ObjResourceReader.CreateTeapotWithColor(Gl, face1Color);
+            spaceship = ObjResourceReader.CreateSpaceshipWithTexture(Gl);
 
             float[] tableColor = [System.Drawing.Color.Azure.R/256f,
                                   System.Drawing.Color.Azure.G/256f,

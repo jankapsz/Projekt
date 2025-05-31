@@ -31,10 +31,7 @@ void main()
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), shininess) / max(dot(norm,viewDir), -dot(norm,lightDir));
     vec3 specular = specularStrength * spec * lightColor;  
 
-    vec3 result = (ambient + diffuse + specular) * outCol.xyz;
-
-    // textrure color
+    vec3 result = (ambient + diffuse + specular);
     vec4 textColor = texture(uTexture, outTex);
-
-    FragColor = vec4(result, outCol.w) + vec4(textColor);
+    FragColor = vec4(result * textColor.xyz, textColor.w);
 }
