@@ -37,6 +37,12 @@ namespace Szeminarium1_24_02_17_2
 
         private static Vector3D<float> spaceshipPosition = Vector3D<float>.Zero;
 
+        private static bool FirstPersonView = false;
+
+        private static float spaceshipRotationY = 0f;
+        private static float spaceshipMoveSpeed = 5.0f;
+
+
         private const string ModelMatrixVariableName = "uModel";
         private const string NormalMatrixVariableName = "uNormal";
         private const string ViewMatrixVariableName = "uView";
@@ -163,12 +169,12 @@ namespace Szeminarium1_24_02_17_2
                     MoveSpaceship(1f, 0, 0); // Forward
                     break;
                 case Key.S:
-                    MoveSpaceship(1f, 0, 0); // Backward
-                    break;
-                case Key.A:
-                    MoveSpaceship(0, 0, -1f); // Left
+                    MoveSpaceship(-1f, 0, 0); // Backward
                     break;
                 case Key.D:
+                    MoveSpaceship(0, 0, -1f); // Left
+                    break;
+                case Key.A:
                     MoveSpaceship(0, 0, 1f); // Right
                     break;
                 case Key.Q:
@@ -177,6 +183,10 @@ namespace Szeminarium1_24_02_17_2
                 case Key.E:
                     MoveSpaceship(0, -1f, 0); // Down
                     break;
+                case Key.V:
+                    FirstPersonView = !FirstPersonView;
+                    break;
+
             }
         }
 
@@ -202,6 +212,31 @@ namespace Szeminarium1_24_02_17_2
 
             Gl.UseProgram(program);
 
+            if (FirstPersonView)
+            {
+                var forwardDir = new Vector3D<float>(
+                    (float)Math.Sin(spaceshipRotationY),
+                    0f,
+                    (float)Math.Cos(spaceshipRotationY)
+                );
+
+                cameraDescriptor.OverridePosition = spaceshipPosition + new Vector3D<float>(0f, 0.7f, 22.0f); // x, y, z
+                cameraDescriptor.Target = spaceshipPosition + new Vector3D<float>(0f, 1.0f, 40.0f);
+
+            }
+            else
+            {
+                var backwardDir = new Vector3D<float>(
+                    -(float)Math.Sin(spaceshipRotationY),
+                    0,
+                    -(float)Math.Cos(spaceshipRotationY)
+                );
+
+                cameraDescriptor.Target = spaceshipPosition;
+                cameraDescriptor.OverridePosition = spaceshipPosition + backwardDir * 30 + new Vector3D<float>(0f, 4f, 0f);
+            }
+
+
             SetViewMatrix();
             SetProjectionMatrix();
 
@@ -212,15 +247,23 @@ namespace Szeminarium1_24_02_17_2
 
             DrawPulsingTeapot();
 
-            //DrawRevolvingCube();
 
             DrawSkyBox();
 
-            //ImGuiNET.ImGui.ShowDemoWindow();
-            ImGuiNET.ImGui.Begin("Lighting properties",
-                ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoTitleBar);
-            ImGuiNET.ImGui.SliderFloat("Shininess", ref Shininess, 1, 200);
+            ImGuiNET.ImGui.Begin("Controls",
+            ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoTitleBar);
+
+            // Kameraváltás checkbox
+            ImGuiNET.ImGui.Checkbox("First Person View", ref FirstPersonView);
+
+            //ImGuiNET.ImGui.Separator(); // Elválasztó vonal
+
+            // Lighting beállítások
+            //ImGuiNET.ImGui.Text("Lighting Properties:");
+            //ImGuiNET.ImGui.SliderFloat("Shininess", ref Shininess, 1, 200);
+
             ImGuiNET.ImGui.End();
+
 
 
             controller.Render();
@@ -228,7 +271,7 @@ namespace Szeminarium1_24_02_17_2
 
         private static unsafe void DrawSkyBox()
         {
-            Matrix4X4<float> modelMatrix = Matrix4X4.CreateScale(400f);
+            Matrix4X4<float> modelMatrix = Matrix4X4.CreateScale(10000f);
             SetModelMatrix(modelMatrix);
             Gl.BindVertexArray(skyBox.Vao);
 
@@ -347,7 +390,7 @@ namespace Szeminarium1_24_02_17_2
                           cameraRight * leftRight;
 
             // Update spaceship position
-            spaceshipPosition += movement;
+            spaceshipPosition += movement * spaceshipMoveSpeed;
 
             // Update camera target to follow the spaceship
             cameraDescriptor.Target = spaceshipPosition;
@@ -418,9 +461,11 @@ namespace Szeminarium1_24_02_17_2
 
         private static unsafe void SetProjectionMatrix()
         {
-            var projectionMatrix = Matrix4X4.CreatePerspectiveFieldOfView<float>((float)Math.PI / 4f, 1024f / 768f, 0.1f, 1000);
-            int location = Gl.GetUniformLocation(program, ProjectionMatrixVariableName);
+            // Az utolsó paraméter (1000) a far plane - ez legyen nagyobb mint a skybox
+            var projectionMatrix = Matrix4X4.CreatePerspectiveFieldOfView<float>(
+                (float)Math.PI / 4f, 1024f / 768f, 0.1f, 200000f); // 1000f helyett 200000f
 
+            int location = Gl.GetUniformLocation(program, ProjectionMatrixVariableName);
             if (location == -1)
             {
                 throw new Exception($"{ViewMatrixVariableName} uniform not found on shader.");

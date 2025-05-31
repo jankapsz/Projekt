@@ -14,6 +14,8 @@ namespace Szeminarium1_24_02_17_2
 
         private const double AngleChangeStepSize = Math.PI / 180 * 5;
 
+        public Vector3D<float>? OverridePosition { get; set; } = null;
+
         /// <summary>
         /// Gets the position of the camera.
         /// </summary>
@@ -21,6 +23,9 @@ namespace Szeminarium1_24_02_17_2
         {
             get
             {
+                if (OverridePosition.HasValue)
+                    return OverridePosition.Value;
+
                 var pos = GetPointFromAngles(DistanceToOrigin, AngleToZYPlane, AngleToZXPlane);
                 return new Vector3D<float>(pos.X + Target.X, pos.Y + Target.Y, pos.Z + Target.Z);
             }
