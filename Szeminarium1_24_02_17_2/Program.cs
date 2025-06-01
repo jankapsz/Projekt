@@ -596,12 +596,10 @@ namespace Szeminarium1_24_02_17_2
             float[] face5Color = [0.0f, 1.0f, 1.0f, 1.0f];
             float[] face6Color = [1.0f, 1.0f, 0.0f, 1.0f];
 
-            spaceship = ObjResourceReader.CreateSpaceshipWithTexture(Gl);
-            sun = ObjResourceReader.CreateSunWithTexture(Gl);
-
-            mercury = ObjResourceReader.CreateMercuryWithTexture(Gl); // Új
-
-            asteroid = ObjResourceReader.CreateAsteroidWithTexture(Gl);
+            spaceship = ObjResourceReader.CreateObjectWithTexture(Gl, "spaceship.obj", "spaceship_texture.jpg", flipTextureY: true);
+            sun = ObjResourceReader.CreateObjectWithTexture(Gl, "sun.obj", "sun_texture.jpg");
+            mercury = ObjResourceReader.CreateObjectWithTexture(Gl, "mercury.obj", "mercury_texture.jpg");
+            asteroid = ObjResourceReader.CreateObjectWithTexture(Gl, "asteroid.obj", "asteroid_texture.jpg");
 
             // Random bolygó pozíciók generálása
             Random random = new Random();
