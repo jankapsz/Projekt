@@ -24,7 +24,7 @@ namespace Szeminarium1_24_02_17_2
 
             bool hasNormals = objNormals.Count > 0;
 
-            // Calculate normals if not present in OBJ file
+            // calculating normals if not present in OBJ file
             if (!hasNormals)
             {
                 foreach (var face in objFaces)
@@ -50,7 +50,7 @@ namespace Szeminarium1_24_02_17_2
                 }
             }
 
-            // Build vertex data
+            // building vertex data
             List<float> glVertices = new List<float>();
             List<uint> glIndices = new List<uint>();
             Dictionary<string, uint> uniqueVertexMap = new();
@@ -63,20 +63,21 @@ namespace Szeminarium1_24_02_17_2
                     Vector3D<float> normal = hasNormals && vnIdx >= 0 ? objNormals[vnIdx] : finalNormals[vIdx];
                     Vector2D<float> texCoord = vtIdx >= 0 && vtIdx < objTexCoords.Count ? objTexCoords[vtIdx] : new Vector2D<float>(0, 0);
 
+                    // vertex deduplication
                     string key = $"{position.X:F6} {position.Y:F6} {position.Z:F6} {normal.X:F6} {normal.Y:F6} {normal.Z:F6} {texCoord.X:F6} {texCoord.Y:F6}";
                     if (!uniqueVertexMap.TryGetValue(key, out uint index))
                     {
-                        index = (uint)(glVertices.Count / 8); // 8 = 3 pos + 3 normal + 2 texcoord
+                        index = (uint)(glVertices.Count / 8); // 8 = 3 pos + 3 normal + 2 texcoord (for vertex shader)
                         uniqueVertexMap[key] = index;
 
-                        glVertices.Add(position.X);
-                        glVertices.Add(position.Y);
-                        glVertices.Add(position.Z);
-                        glVertices.Add(normal.X);
-                        glVertices.Add(normal.Y);
-                        glVertices.Add(normal.Z);
-                        glVertices.Add(texCoord.X);
-                        glVertices.Add(texCoord.Y);
+                        glVertices.Add(position.X);   // [0] pos X
+                        glVertices.Add(position.Y);   // [1] pos Y  
+                        glVertices.Add(position.Z);   // [2] pos Z
+                        glVertices.Add(normal.X);     // [3] normal X
+                        glVertices.Add(normal.Y);     // [4] normal Y
+                        glVertices.Add(normal.Z);     // [5] normal Z
+                        glVertices.Add(texCoord.X);   // [6] texture U
+                        glVertices.Add(texCoord.Y);   // [7] texture V
                     }
 
                     glIndices.Add(index);
@@ -88,6 +89,7 @@ namespace Szeminarium1_24_02_17_2
 
         private static unsafe GlObject CreateOpenGlObjectWithTexture(GL Gl, uint vao, List<float> glVertices, List<uint> glIndices, string textureFileName)
         {
+            // memory layout (total: 32 bytes)
             uint offsetPos = 0;
             uint offsetNormal = offsetPos + (3 * sizeof(float));
             uint offsetTexture = offsetNormal + (3 * sizeof(float));
@@ -95,21 +97,21 @@ namespace Szeminarium1_24_02_17_2
 
             uint vertices = Gl.GenBuffer();
             Gl.BindBuffer(GLEnum.ArrayBuffer, vertices);
-            Gl.BufferData(GLEnum.ArrayBuffer, (ReadOnlySpan<float>)glVertices.ToArray().AsSpan(), GLEnum.StaticDraw);
+            Gl.BufferData(GLEnum.ArrayBuffer, (ReadOnlySpan<float>)glVertices.ToArray().AsSpan(), GLEnum.StaticDraw); // copying into GPU memory
 
-            // Position attribute
+            // position attribute
             Gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, vertexSize, (void*)offsetPos);
             Gl.EnableVertexAttribArray(0);
 
-            // Normal attribute
+            // normal attribute
             Gl.VertexAttribPointer(2, 3, VertexAttribPointerType.Float, false, vertexSize, (void*)offsetNormal);
             Gl.EnableVertexAttribArray(2);
 
-            // Texture coordinate attribute
+            // texture coordinate attribute
             Gl.VertexAttribPointer(3, 2, VertexAttribPointerType.Float, false, vertexSize, (void*)offsetTexture);
             Gl.EnableVertexAttribArray(3);
 
-            // Create texture
+            // creating texture
             uint texture = Gl.GenTexture();
             Gl.ActiveTexture(TextureUnit.Texture0);
             Gl.BindTexture(TextureTarget.Texture2D, texture);
@@ -146,6 +148,7 @@ namespace Szeminarium1_24_02_17_2
             return result;
         }
 
+        // OBJ file parser
         private static void ReadObjData(string objFileName, out List<Vector3D<float>> objVertices, out List<Vector3D<float>> objNormals, out List<Vector2D<float>> objTexCoords, out List<(int v, int vt, int vn)[]> objFaces, bool flipTextureY = false)
         {
             objVertices = new();
@@ -169,9 +172,9 @@ namespace Szeminarium1_24_02_17_2
                 {
                     case "v":
                         objVertices.Add(new Vector3D<float>(
-                            float.Parse(tokens[1], CultureInfo.InvariantCulture),
-                            float.Parse(tokens[2], CultureInfo.InvariantCulture),
-                            float.Parse(tokens[3], CultureInfo.InvariantCulture)
+                            float.Parse(tokens[1], CultureInfo.InvariantCulture), // x
+                            float.Parse(tokens[2], CultureInfo.InvariantCulture), // y
+                            float.Parse(tokens[3], CultureInfo.InvariantCulture) // z
                         ));
                         break;
 
@@ -179,31 +182,31 @@ namespace Szeminarium1_24_02_17_2
                         if (tokens.Length >= 3)
                         {
                             float textureY = float.Parse(tokens[2], CultureInfo.InvariantCulture);
-                            if (flipTextureY)
+                            if (flipTextureY) // Blender vs OpenGL
                                 textureY = 1.0f - textureY;
 
                             objTexCoords.Add(new Vector2D<float>(
-                                float.Parse(tokens[1], CultureInfo.InvariantCulture),
-                                textureY
+                                float.Parse(tokens[1], CultureInfo.InvariantCulture), // u
+                                textureY                                              // v
                             ));
                         }
                         break;
 
                     case "vn":
                         objNormals.Add(new Vector3D<float>(
-                            float.Parse(tokens[1], CultureInfo.InvariantCulture),
-                            float.Parse(tokens[2], CultureInfo.InvariantCulture),
-                            float.Parse(tokens[3], CultureInfo.InvariantCulture)
+                            float.Parse(tokens[1], CultureInfo.InvariantCulture), // nx
+                            float.Parse(tokens[2], CultureInfo.InvariantCulture), // ny
+                            float.Parse(tokens[3], CultureInfo.InvariantCulture) // nz
                         ));
                         break;
 
                     case "f":
-                        // Handle both triangles (3 vertices) and quads (4 vertices)
+                        // handles both triangles (3 vertices) and quads (4 vertices)
                         int vertexCount = tokens.Length - 1;
 
                         if (vertexCount == 3)
                         {
-                            // Triangle
+                            // triangle
                             var face = new (int, int, int)[3];
                             for (int i = 0; i < 3; i++)
                             {
@@ -217,7 +220,7 @@ namespace Szeminarium1_24_02_17_2
                         }
                         else if (vertexCount == 4)
                         {
-                            // Quad - split into two triangles
+                            // quad - splitting into two triangles
                             var vertices = new (int v, int vt, int vn)[4];
                             for (int i = 0; i < 4; i++)
                             {
@@ -228,21 +231,21 @@ namespace Szeminarium1_24_02_17_2
                                 vertices[i] = (vIdx, vtIdx, vnIdx);
                             }
 
-                            // First triangle: 0, 1, 2
+                            // first triangle: 0, 1, 2
                             var face1 = new (int, int, int)[3];
                             face1[0] = vertices[0];
                             face1[1] = vertices[1];
                             face1[2] = vertices[2];
                             objFaces.Add(face1);
 
-                            // Second triangle: 0, 2, 3
+                            // second triangle: 0, 2, 3
                             var face2 = new (int, int, int)[3];
                             face2[0] = vertices[0];
                             face2[1] = vertices[2];
                             face2[2] = vertices[3];
                             objFaces.Add(face2);
                         }
-                        break;
+                    break;
                 }
             }
         }

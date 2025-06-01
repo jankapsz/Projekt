@@ -19,11 +19,11 @@ namespace Szeminarium1_24_02_17_2
         /// <summary>
         /// Gets the position of the camera.
         /// </summary>
-        public Vector3D<float> Position
+        public Vector3D<float> Position 
         {
             get
             {
-                if (OverridePosition.HasValue)
+                if (OverridePosition.HasValue) // for switching between views
                     return OverridePosition.Value;
 
                 var pos = GetPointFromAngles(DistanceToOrigin, AngleToZYPlane, AngleToZXPlane);
